@@ -5,10 +5,12 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "util.h"
 
 #include "libsyscalls.h"
+#include "libconstants.h"
 
 /*
  * These are syscalls used by the syslog() C library call.  You can find them
@@ -116,4 +118,19 @@ char *tokenize(char **stringp, const char *delim)
 	}
 
 	return ret;
+}
+
+long int parse_constant(char *constant_str, char **endptr) {
+	const struct constant_entry *entry = constant_table;
+	for (; entry->name; ++entry) {
+		if (!strcmp(entry->name, constant_str)) {
+			if (endptr) {
+				*endptr = constant_str + strlen(constant_str);
+			}
+
+			return entry->value;
+		}
+	}
+
+	return strtol(constant_str, endptr, 0);
 }

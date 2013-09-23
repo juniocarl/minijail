@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <signal.h>
 
 static int (*real_main) (int, char **, char **);
 static void *libc_handle;

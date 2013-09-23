@@ -18,6 +18,10 @@ if [ $# -ne 1 ] && [ $# -ne 3 ]; then
   exit 1
 fi
 
+if [ "$CC" = "" ]; then
+	CC=/usr/bin/cpp
+fi
+
 if [ $# -eq 3 ]; then
   CC="$1"
   shift

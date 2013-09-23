@@ -4,6 +4,8 @@
  */
 
 #include <dlfcn.h>
+#include <errno.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +85,7 @@ static void usage(const char *progn)
 	       "instances allowed\n"
 	       "  -c <caps>:  restrict caps to <caps>\n"
 	       "  -C <dir>:   chroot to <dir>\n"
+	       "  -d <dir>:   chdir to <dir> (requires -C)\n"
 	       "  -e:         enter a network namespace\n"
 	       "  -G:         inherit secondary groups from uid\n"
 	       "  -g <group>: change gid to <group>\n"
@@ -127,7 +130,7 @@ static int parse_args(struct minijail *j, int argc, char *argv[],
 	int mount_tmp = 0;
 	if (argc > 1 && argv[1][0] != '-')
 		return 1;
-	while ((opt = getopt(argc, argv, "u:g:sS:c:C:b:vrGhHinpLet")) != -1) {
+	while ((opt = getopt(argc, argv, "u:g:sS:c:C:b:d:vrGhHinpLet")) != -1) {
 		switch (opt) {
 		case 'u':
 			set_user(j, optarg);
@@ -162,6 +165,10 @@ static int parse_args(struct minijail *j, int argc, char *argv[],
 		case 't':
 			minijail_mount_tmp(j);
 			mount_tmp = 1;
+			break;
+		case 'd':
+			if (0 != minijail_chroot_chdir(j, optarg))
+				exit(1);
 			break;
 		case 'v':
 			minijail_namespace_vfs(j);
@@ -226,17 +233,22 @@ int main(int argc, char *argv[])
 	char *dl_mesg = NULL;
 	int exit_immediately = 0;
 	int consumed = parse_args(j, argc, argv, &exit_immediately);
+	char filepath[PATH_MAX+1];
+	if (0 != minijail_get_path(j, filepath, sizeof(filepath), argv[0])) {
+		fprintf(stderr, "Invalid path\n");
+		return 1;
+	}
 	ElfType elftype = ELFERROR;
 	argc -= consumed;
 	argv += consumed;
 	/* Check that we can access the target program. */
-	if (access(argv[0], X_OK)) {
+	if (access(filepath, X_OK)) {
 		fprintf(stderr, "Target program '%s' is not accessible.\n",
 			argv[0]);
 		return 1;
 	}
 	/* Check if target is statically or dynamically linked. */
-	elftype = get_elf_linkage(argv[0]);
+	elftype = get_elf_linkage(filepath);
 	if (elftype == ELFSTATIC) {
 		/* Target binary is static. */
 		minijail_run_static(j, argv[0], argv);
