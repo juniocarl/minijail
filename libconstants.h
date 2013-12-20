@@ -7,7 +7,7 @@
 
 struct constant_entry {
   const char *name;
-  int value;
+  long long value;
 };
 
 extern const struct constant_entry constant_table[];
