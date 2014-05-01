@@ -652,11 +652,11 @@ int mount_tmp(void)
 
 int remount_readonly(const struct minijail *j)
 {
+	int ret = 0;
 	char *procPath = NULL;
-	if (asprintf(&procPath, "%s/proc", j->chrootdir ? j->chrootdir : "") < 0) {
-		return -ENOMEM;
-	}
 	const unsigned int kSafeFlags = MS_NODEV | MS_NOEXEC | MS_NOSUID;
+	if (asprintf(&procPath, "%s/proc", j->chrootdir ? j->chrootdir : "") < 0)
+		return -ENOMEM;
 	/*
 	 * Right now, we're holding a reference to our parent's old mount of
 	 * /proc in our namespace, which means using MS_REMOUNT here would
@@ -666,11 +666,13 @@ int remount_readonly(const struct minijail *j)
 	 */
 	/* Some distros have JDK mount this. Unmount it without erroring out */
 	umount("/proc/sys/fs/binfmt_misc");
+	errno = 0;
 	if (umount("/proc"))
-		return -errno;
-	if (mount("", procPath, "proc", kSafeFlags | MS_RDONLY, ""))
-		return -errno;
-	return 0;
+		ret = -errno;
+	else if (mount("", procPath, "proc", kSafeFlags | MS_RDONLY, ""))
+		ret = -errno;
+	free(procPath);
+	return ret;
 }
 
 void drop_ugid(const struct minijail *j)
