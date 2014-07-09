@@ -902,6 +902,8 @@ void timeout(int __attribute__ ((unused)) sig)
 int init(struct minijail *j, pid_t rootpid)
 {
 	pid_t pid;
+	int exit_status;
+	int exit_signal;
 	int status;
 	struct rusage usage;
 	struct timespec t0, t1;
@@ -941,26 +943,34 @@ int init(struct minijail *j, pid_t rootpid)
 				(1000000000L * t1.tv_sec + t1.tv_nsec) / 1000L,
 				usage.ru_maxrss * 1024);
 	}
+
+	exit_signal = 0;
 	if (signal_override) {
-		fprintf(j->meta_file, "signal:%d\n", signal_override);
-		fclose(j->meta_file);
-		_exit(MINIJAIL_ERR_INIT);
+		exit_signal = signal_override;
+		exit_status = MINIJAIL_ERR_INIT;
 	} else if (!WIFEXITED(init_exitstatus)) {
-		if (j->flags.meta_file) {
-			if (WIFSIGNALED(init_exitstatus)) {
-				fprintf(j->meta_file, "signal:%d\n", WTERMSIG(init_exitstatus));
-			} else {
-				fprintf(j->meta_file, "signal:%d\n", -1);
-			}
-			fclose(j->meta_file);
+		exit_signal = -1;
+		if (WIFSIGNALED(init_exitstatus)) {
+			exit_signal = WTERMSIG(init_exitstatus);
 		}
-		_exit(MINIJAIL_ERR_INIT);
+		exit_status = MINIJAIL_ERR_INIT;
+	} else {
+		exit_status = WEXITSTATUS(init_exitstatus);
 	}
 	if (j->flags.meta_file) {
-		fprintf(j->meta_file, "status:%d\n", WEXITSTATUS(init_exitstatus));
+		if (exit_signal != 0) {
+			fprintf(j->meta_file, "signal:%d\n", exit_signal);
+		} else {
+			fprintf(j->meta_file, "status:%d\n", exit_status);
+		}
 		fclose(j->meta_file);
 	}
-	_exit(WEXITSTATUS(init_exitstatus));
+	if (exit_signal == SIGSYS) {
+		warn("illegal syscall");
+	} else {
+		info("normal exit");
+	}
+	_exit(exit_status);
 }
 
 int API minijail_from_fd(int fd, struct minijail *j)

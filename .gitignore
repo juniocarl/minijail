@@ -1,0 +1,16 @@
+# Object files
+*.o
+*.so
+
+# Generated files
+*.gen.c
+
+# Binaries
+minijail0
+libminijail_unittest
+syscall_filter_unittest
+minijail_syscall_helper
+
+# other stuff
+omegaup/
+tags
