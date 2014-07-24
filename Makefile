@@ -12,7 +12,8 @@ ifneq ($(HAVE_SECUREBITS_H),no)
 CFLAGS += -DHAVE_SECUREBITS_H
 endif
 
-all : minijail0 libminijail.so libminijailpreload.so minijail_syscall_helper
+all : minijail0 libminijail.so libminijailpreload.so minijail_syscall_helper \
+		ldwrapper
 
 tests : libminijail_unittest.wrapper syscall_filter_unittest
 
@@ -82,6 +83,9 @@ libsyscalls.gen.c : Makefile libsyscalls.h gen_syscalls.sh
 minijail_syscall_helper: minijail_syscall_helper.c libsyscalls.gen.o
 	$(CC) $(CFLAGS) -o $@ $^
 
+ldwrapper: ldwrapper.c
+	$(CC) $(CFLAGS) -o $@ $^
+
 # Only clean up files affected by the CFLAGS change for testing.
 test-clean :
 	@rm -f libminijail.o libminijail_unittest.o
@@ -95,3 +99,4 @@ clean : test-clean
 	@rm -f syscall_filter.o signal.o bpf.o util.o
 	@rm -f syscall_filter_unittest syscall_filter_unittest.o
 	@rm -f minijail_syscall_helper
+	@rm -f ldwrapper

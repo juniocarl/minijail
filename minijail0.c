@@ -203,15 +203,16 @@ int main(int argc, char *argv[])
 	argv += consumed;
 	char *dl_mesg = NULL;
 	char filepath[PATH_MAX+1];
-	if (0 != minijail_get_path(j, filepath, sizeof(filepath), argv[0])) {
+	if (minijail_get_path(j, filepath, sizeof(filepath), argv[0])) {
 		fprintf(stderr, "Invalid path\n");
 		return 1;
 	}
 	ElfType elftype = ELFERROR;
 	/* Check that we can access the target program. */
 	if (access(filepath, X_OK)) {
-		fprintf(stderr, "Target program '%s' is not accessible.\n",
-			argv[0]);
+		fprintf(stderr, "Target program '%s' (%s) is not accessible.\n",
+			argv[0],
+			filepath);
 		return 1;
 	}
 	/* Check if target is statically or dynamically linked. */
@@ -232,8 +233,13 @@ int main(int argc, char *argv[])
 		 * inject libminijailpreload.so into it.
 		 */
 
+		if (minijail_get_path(j, filepath, sizeof(filepath), PRELOADPATH)) {
+			fprintf(stderr, "%s not found\n", PRELOADPATH);
+			return 1;
+		}
+
 		/* Check that we can dlopen() libminijailpreload.so. */
-		if (!dlopen(PRELOADPATH, RTLD_LAZY | RTLD_LOCAL)) {
+		if (!dlopen(filepath, RTLD_LAZY | RTLD_LOCAL)) {
 			    dl_mesg = dlerror();
 			    fprintf(stderr, "dlopen(): %s\n", dl_mesg);
 			    return 1;

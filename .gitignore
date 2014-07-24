@@ -10,6 +10,7 @@ minijail0
 libminijail_unittest
 syscall_filter_unittest
 minijail_syscall_helper
+ldwrapper
 
 # other stuff
 omegaup/
