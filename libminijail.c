@@ -28,6 +28,8 @@
 #include <sys/param.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -1543,6 +1545,7 @@ int concat_path(char *buffer, size_t buffer_len, const char *path)
 int API minijail_get_path(struct minijail *j, char *buffer, size_t buffer_len,
 			   const char *path)
 {
+	struct stat st;
 	buffer[0] = '\0';
 
 	// Get the absolute path of the file, including the chdir if this is a
@@ -1602,9 +1605,31 @@ int API minijail_get_path(struct minijail *j, char *buffer, size_t buffer_len,
 	strncpy(buffer, src_path, src_len);
 	buffer[src_len] = '/';
 
-	fprintf(stderr, "Transformed path: %s\n", buffer);
+	if (lstat(buffer, &st) == -1) {
+		return 1;
+	}
 
-	return 0;
+	// Regular file. All is good.
+	if (S_ISREG(st.st_mode)) {
+		return 0;
+	}
+
+	// Not a symbolic link. Disallowing.
+	if (!S_ISLNK(st.st_mode)) {
+		return 1;
+	}
+
+	char linkpath[PATH_MAX+1];
+	ssize_t linklen;
+	linklen = readlink(buffer, linkpath, sizeof(linkpath) - 1);
+	if (linklen == -1) {
+		fprintf(stderr, "Invalid symlink\n");
+		return 1;
+	}
+	linkpath[linklen] = '\0';
+
+	// Recursively try to figure out the real path.
+	return minijail_get_path(j, buffer, buffer_len, linkpath);
 }
 
 /* The following are only used for omegaUp */
