@@ -1386,6 +1386,11 @@ int API minijail_run_pid_pipes(struct minijail *j, const char *filename,
 		pdie("chroot");
 	}
 
+	if (setup_limits(j)) {
+		die("failed to set execution limits");
+	}
+
+
 	_exit(execve(filename, argv, environ));
 }
 
