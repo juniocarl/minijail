@@ -133,6 +133,10 @@ int init() {
 		return -1;
 	}
 
+	// Once everything is ready, write a small string to stdout to signal the
+	// parent that it can now start the minijail process.
+	write(STDOUT_FILENO, "ready\n", 6);
+
 	return 0;
 }
 
@@ -150,6 +154,7 @@ int main() {
 	int i;
 
 	if (init() == -1) {
+		write(STDOUT_FILENO, "error\n", 6);
 		return 1;
 	}
 
