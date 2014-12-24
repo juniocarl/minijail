@@ -60,7 +60,8 @@ static void usage(const char *progn)
 	       "  -s:         use seccomp\n"
 	       "  -S <file>:  set seccomp filter using <file>\n"
 	       "              E.g., -S /usr/share/filters/<prog>.$(uname -m)\n"
-	       "  -t:         set the current time limit\n");
+	       "  -t:         set the current time limit (msec)\n"
+	       "  -w:         add wall time (msec) to the current time limit\n");
 }
 
 static void seccomp_filter_usage(const char *progn)
@@ -78,7 +79,7 @@ static int parse_args(struct minijail *j, int argc, char *argv[])
 	int opt;
 	if (argc > 1 && argv[1][0] != '-')
 		return 1;
-	while ((opt = getopt(argc, argv, "u:g:sS:c:C:d:b:vrGhHinpLet:k:O:m:M:0:1:2:")) != -1) {
+	while ((opt = getopt(argc, argv, "u:g:sS:c:C:d:b:vrGhHinpLet:w:k:O:m:M:0:1:2:")) != -1) {
 		switch (opt) {
 		case 's':
 			minijail_use_seccomp(j);
@@ -109,6 +110,9 @@ static int parse_args(struct minijail *j, int argc, char *argv[])
 			exit(1);
 		case 't':
 			minijail_time_limit(j, atoi(optarg));
+			break;
+		case 'w':
+			minijail_extra_wall_time(j, atoi(optarg));
 			break;
 		case 'k':
 			minijail_stack_limit(j, atoi(optarg));
